@@ -1,16 +1,58 @@
+import { db } from '../db';
+import { patientsTable } from '../db/schema';
 import { type UpdatePatientInput, type Patient } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const updatePatient = async (input: UpdatePatientInput): Promise<Patient> => {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to update an existing patient's information in the database.
-  return Promise.resolve({
-    id: input.id,
-    name: input.name || 'Updated Patient',
-    date_of_birth: input.date_of_birth || new Date(),
-    gender: input.gender || 'male',
-    phone: input.phone || null,
-    address: input.address || null,
-    created_at: new Date(),
-    updated_at: new Date()
-  } as Patient);
+  try {
+    // First, verify the patient exists
+    const existingPatient = await db.select()
+      .from(patientsTable)
+      .where(eq(patientsTable.id, input.id))
+      .execute();
+
+    if (existingPatient.length === 0) {
+      throw new Error(`Patient with id ${input.id} not found`);
+    }
+
+    // Prepare update data - only include fields that are provided
+    const updateData: any = {
+      updated_at: new Date()
+    };
+
+    if (input.name !== undefined) {
+      updateData.name = input.name;
+    }
+    if (input.date_of_birth !== undefined) {
+      updateData.date_of_birth = input.date_of_birth;
+    }
+    if (input.gender !== undefined) {
+      updateData.gender = input.gender;
+    }
+    if (input.phone !== undefined) {
+      updateData.phone = input.phone;
+    }
+    if (input.address !== undefined) {
+      updateData.address = input.address;
+    }
+
+    // Update patient record
+    const result = await db.update(patientsTable)
+      .set(updateData)
+      .where(eq(patientsTable.id, input.id))
+      .returning()
+      .execute();
+
+    // Convert date strings back to Date objects
+    const patient = result[0];
+    return {
+      ...patient,
+      date_of_birth: new Date(patient.date_of_birth),
+      created_at: new Date(patient.created_at),
+      updated_at: new Date(patient.updated_at)
+    };
+  } catch (error) {
+    console.error('Patient update failed:', error);
+    throw error;
+  }
 };

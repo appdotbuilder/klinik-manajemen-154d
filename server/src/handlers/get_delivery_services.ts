@@ -1,7 +1,21 @@
+import { db } from '../db';
+import { deliveryServicesTable } from '../db/schema';
 import { type DeliveryService } from '../schema';
 
 export const getDeliveryServices = async (): Promise<DeliveryService[]> => {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to fetch all delivery service records from the database.
-  return [];
+  try {
+    const results = await db.select()
+      .from(deliveryServicesTable)
+      .execute();
+
+    // Convert numeric and date fields for proper typing
+    return results.map(deliveryService => ({
+      ...deliveryService,
+      baby_weight: parseFloat(deliveryService.baby_weight),
+      delivery_date: new Date(deliveryService.delivery_date)
+    }));
+  } catch (error) {
+    console.error('Failed to fetch delivery services:', error);
+    throw error;
+  }
 };
